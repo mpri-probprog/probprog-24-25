@@ -7,6 +7,7 @@ type _ t =
   | Gaussian : (float * float) -> float t
   | Categorical : ('a * float) list -> 'a t
   | Empirical : 'a list -> 'a t
+  | Poisson : float -> int t
 
 let dirac ~v = Dirac v
 let uniform ~a ~b = Uniform (a, b)
@@ -16,6 +17,7 @@ let beta ~a ~b = Beta (a, b)
 let gaussian ~mu ~sigma = Gaussian (mu, sigma)
 let categorical ~support = Categorical support
 let empirical ~samples = Empirical samples
+let poisson ~lambda = Poisson lambda
 let pi = 4. *. atan 1.
 let two_pi = 2.0 *. pi
 let sqrt_two_pi = sqrt two_pi
@@ -83,6 +85,7 @@ let rec draw : type a. a t -> a = function
   | Empirical samples ->
       let i = Random.int (List.length samples) in
       List.nth samples i
+  | Poisson _ -> assert false
 
 let log_combination n k =
   let rec comb acc n k =
@@ -140,6 +143,7 @@ let logpdf : type a. a t -> a -> float =
       (-0.5 *. log (two_pi *. sigma *. sigma))
       -. (((x -. mu) ** 2.) /. (2. *. sigma *. sigma))
   | Categorical support -> List.assoc x support
+  | Poisson _ -> assert false
   | Empirical _ ->
       raise
         (Invalid_argument "Logpdf is not defined for an Empirical distribution")
@@ -177,6 +181,7 @@ let mean_int : int t -> float = function
       let norm = samples |> List.length |> Float.of_int in
       let sum = List.fold_left (fun s v -> s +. Float.of_int v) 0. samples in
       sum /. norm
+  | Poisson _ -> assert false
 
 let var : float t -> float = function
   | Dirac _ -> 0.
@@ -220,6 +225,7 @@ let var_int : int t -> float = function
           (0., 0.) samples
       in
       (sq_sum /. norm) -. ((sum /. norm) ** 2.)
+  | Poisson _ -> assert false
 
 let std : float t -> float = fun dist -> sqrt (var dist)
 let std_int : int t -> float = fun dist -> sqrt (var_int dist)
@@ -235,7 +241,7 @@ let get_support : type a. a t -> (a * float) list =
   | Bernoulli p -> [ (true, p); (false, 1. -. p) ]
   | Empirical samples -> List.map (fun v -> (v, 0.)) samples
   | Categorical support -> support
-  | Uniform _ | Binomial _ | Beta _ | Gaussian _ ->
+  | Uniform _ | Binomial _ | Beta _ | Gaussian _ | Poisson _ ->
       raise (Invalid_argument "Support is not finite")
 
 let categorical_to_list : type a. a t -> (a * float) list =

@@ -67,6 +67,8 @@ val categorical : support:('a * float) list -> 'a t
 val empirical : samples:'a list -> 'a t
 (** Support distribution where all values are equiprobable. *)
 
+val poisson : lambda:float -> int t
+
 (** {1 Continuous distributions} *)
 
 val beta : a:float -> b:float -> float t
