@@ -1,0 +1,3 @@
+(executables
+ (names funny_bernoulli coin regression)
+ (libraries byoppl))
