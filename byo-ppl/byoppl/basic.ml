@@ -39,8 +39,17 @@ module Rejection_sampling = struct
      - Implement the generation function `gen` to generate one sample
   *)
 
-  let infer ?(n = 1000) ?(_max_score = 0.) _model _data =
-    let gen _i = assert false (* TODO *) in
+  include Importance_sampling
+
+  let infer ?(n = 1000) ?(max_score = 0.) model data =
+    let rec gen i =
+      let prob = { score = 0.0 } in
+      let v = model prob data in
+      let u = Random.float 1.0 in
+      let alpha = exp (min 0. (prob.score -. max_score)) in
+      if u <= alpha then v else gen i
+    in
+
     let samples = List.init n gen in
     Distribution.empirical ~samples
 end
@@ -54,11 +63,23 @@ module Simple_metropolis = struct
      - Careful with the initialization step
   *)
 
-  let infer ?(n = 1000) _model _data =
-    let gen _n _samples _old_score _old_value = (* TODO *) assert false in
+  include Importance_sampling
 
-    (* TODO: initialization *)
-    let samples = (* TODO *) gen n [] 0. None in
+  let infer ?(n = 1000) model data =
+    let rec gen n samples old_score old_value =
+      if n = 0 then samples
+      else
+        let prob = { score = 0.0 } in
+        let v = model prob data in
+        let u = Random.float 1.0 in
+        let alpha = exp (min 0. (prob.score -. old_score)) in
+        if u <= alpha then gen (n - 1) (v :: samples) prob.score v
+        else gen (n - 1) (old_value :: samples) old_score old_value
+    in
+
+    let prob = { score = 0.0 } in
+    let first_value = model prob data in
+    let samples = gen n [] prob.score first_value in
     Distribution.empirical ~samples
 end
 
