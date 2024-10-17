@@ -33,11 +33,33 @@ module Importance_sampling = struct
 end
 
 module Rejection_sampling = struct
-  (* TODO *)
+  (* TODO:
+     - What is prob here?
+     - Implement sample / factor / observe assume : as usual?
+     - Implement the generation function `gen` to generate one sample
+  *)
+
+  let infer ?(n = 1000) ?(_max_score = 0.) _model _data =
+    let gen _i = assert false (* TODO *) in
+    let samples = List.init n gen in
+    Distribution.empirical ~samples
 end
 
 module Simple_metropolis = struct
-  (* TODO *)
+  (* TODO:
+     - What is prob here?
+     - Implement sample / factor / observe assume : as usual?
+     - Complete the implementation of single site Metropolis Hastings.
+     - Warning: next value depends on the previous one
+     - Careful with the initialization step
+  *)
+
+  let infer ?(n = 1000) _model _data =
+    let gen _n _samples _old_score _old_value = (* TODO *) assert false in
+
+    (* TODO: initialization *)
+    let samples = (* TODO *) gen n [] 0. None in
+    Distribution.empirical ~samples
 end
 
 module Metropolis_hastings = struct

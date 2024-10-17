@@ -1,0 +1,5 @@
+pyro-ppl
+torch
+torchvision
+tqdm
+pandas
