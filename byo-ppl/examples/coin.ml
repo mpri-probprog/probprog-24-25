@@ -54,3 +54,17 @@ let _ =
   let dist = infer coin data in
   let m, s = stats dist in
   Format.printf "Coin bias, mean: %f std:%f@." m s
+
+open Cps_operators
+open Infer.Importance_sampling
+
+let coin data =
+  let* z = sample (uniform ~a:0. ~b:1.) in
+  let* () = Cps_list.iter (observe (bernoulli ~p:z)) data in
+  return z
+
+let _ =
+  Format.printf "@.-- Coin, CPS Importance Sampling --@.";
+  let dist = infer coin data in
+  let m, s = Distribution.stats dist in
+  Format.printf "Coin bias, mean: %f std:%f@." m s
