@@ -21,17 +21,71 @@ let pp_dist_support fmt (dist : dist Distribution.t) =
 open Symbolic
 
 let _ =
-  Format.printf "@.XXX Symbolic XXX@. TODO";
+  Format.printf "@.XXX Symbolic XXX@.";
 
-  let beta_bernoulli v = assert false in
-  let dist = infer beta_bernoulli 1. in
-  Format.printf "Dist beta_bernoulli : %a @." pp_dist dist
+  let coin () =
+    let z = sample (Beta (const 1., const 1.)) in
+    List.iter (observe (Bernoulli z)) [ 0.; 1.; 0.; 0.; 1.; 0.; 0.; 0. ];
+    z
+  in
+  let dist = infer coin () in
+  Format.printf "Dist coin : %a @." pp_dist dist;
+
+  let gaussian_gaussian () =
+    let mu = sample (Gaussian (const 0., const 1.)) in
+    List.iter (observe (Gaussian (mu, const 1.0))) (List.init 100 (fun _ -> 4.));
+    mu
+  in
+  let dist = infer gaussian_gaussian () in
+  Format.printf "Dist gaussian : %a @." pp_dist dist
+
+(* here symbolic computation is not possible, raise [Not_tractable] *)
+(* let _ =
+   let coin_weird () =
+     let z = sample (Gaussian (const 0.5, const 0.1)) in
+     List.iter (observe (Bernoulli z)) [ 0.; 1.; 0.; 0.; 1.; 0.; 0.; 0. ];
+     z
+   in
+   let dist = infer coin_weird () in
+   Format.printf "Dist coin weird : %a @." pp_dist dist *)
 
 open Semi_symbolic
 
 let _ =
   Format.printf "@.XXX Semi-Symbolic XXX@.";
+  let coin prob () =
+    let z = sample prob (Beta (const 1., const 1.)) in
+    List.iter (observe prob (Bernoulli z)) [ 0.; 1.; 0.; 0.; 1.; 0.; 0.; 0. ];
+    z
+  in
+  let dist = infer coin () in
+  Format.printf "Beta-Bernoulli: %a@." pp_dist_support dist;
 
-  let beta_bernoulli v = assert false in
-  let dist = infer beta_bernoulli 1. in
-  Format.printf "Dist beta_bernoulli : %a @." pp_dist_support dist
+  let gaussian_gaussian prob () =
+    let mu = sample prob (Gaussian (const 0., const 1.)) in
+    List.iter
+      (observe prob (Gaussian (mu, const 1.0)))
+      (List.init 100 (fun _ -> 4.));
+    mu
+  in
+  let dist = infer gaussian_gaussian () in
+  Format.printf "Gauss-Gauss: %a@." pp_dist_support dist;
+
+  (* Test with no conjugacy relation *)
+  let coin_weird prob () =
+    let z = sample prob (Gaussian (const 0.5, const 0.1)) in
+    List.iter (observe prob (Bernoulli z)) [ 0.; 1.; 0.; 0.; 1.; 0.; 0.; 0. ];
+    z
+  in
+  let dist = infer coin_weird () in
+  Format.printf "Coin-Weird: %a@." pp_dist_support dist;
+
+  (* [mu] should be symbolic, [z] should be sampled *)
+  let weird prob () =
+    let z = sample prob (Gaussian (const 0., const 10.)) in
+    let mu = sample prob (Gaussian (z, const 0.1)) in
+    observe prob (Gaussian (mu, const 0.5)) 1.;
+    mu
+  in
+  let dist = infer weird () in
+  Format.printf "Weird: %a@." pp_dist_support dist
