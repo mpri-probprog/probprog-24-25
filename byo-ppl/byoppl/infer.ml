@@ -147,4 +147,60 @@ end
 
 module Metropolis_hastings = struct
   (* TODO *)
+
+  type 'a prob = {
+    score : float;
+    trace : 'a sample_site list;
+    value : 'a option;
+  }
+
+  and 'a sample_site =
+    | Sample : {
+        k : 'b -> 'a next;
+        score : float;
+        dist : 'b Distribution.t;
+      }
+        -> 'a sample_site
+
+  and 'a next = 'a prob -> 'a prob
+  and ('a, 'b) model = 'a -> ('b -> 'b next) -> 'b next
+
+  let sample dist k prob =
+    let value = Distribution.draw dist in
+    let sample_site = Sample { k; score = prob.score; dist } in
+    k value { prob with trace = sample_site :: prob.trace }
+
+  let factor s k prob = k () { prob with score = prob.score +. s }
+  let assume p k prob = factor (if p then 0. else -.infinity) k prob
+  let observe d x k prob = factor (Distribution.logpdf d x) k prob
+
+  let mh prob prob' =
+    let fw = -.log (prob.trace |> List.length |> Float.of_int) in
+    let bw = -.log (prob'.trace |> List.length |> Float.of_int) in
+    min 1. (exp (prob'.score -. prob.score +. bw -. fw))
+
+  let exit v prob = { prob with value = Some v }
+
+  let infer ?(n = 1000) ?(warmup = 0) m data =
+    let rec gen n values prob =
+      if n = 0 then values
+      else
+        let regen_from = Random.int (List.length prob.trace) in
+        let (Sample regen) = List.nth prob.trace regen_from in
+        let prob' =
+          sample regen.dist regen.k
+            {
+              prob with
+              trace = Distribution.drop (regen_from + 1) prob.trace;
+              score = regen.score;
+            }
+        in
+        let next_prob =
+          if Random.float 1. < mh prob prob' then prob' else prob
+        in
+        gen (n - 1) (Option.get next_prob.value :: values) next_prob
+    in
+    let prob = (m data) exit { score = 0.; trace = []; value = None } in
+    let samples = gen (warmup + n) [] prob |> Distribution.drop warmup in
+    Distribution.empirical ~samples
 end
